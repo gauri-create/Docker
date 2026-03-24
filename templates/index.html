@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tic-Tac-Toe</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+/* Page and layout */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #74ebd5, #acb6e5);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    background: #fff;
+    padding: 30px 40px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+h1 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 2em;
+}
+
+/* Board styles */
+#board {
+    display: grid;
+    grid-template-columns: repeat(3, 80px);
+    grid-template-rows: repeat(3, 80px);
+    gap: 10px;
+    justify-content: center;
+    margin: 20px auto;
+}
+
+.cell {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    font-weight: bold;
+    border-radius: 15px;
+    background: #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.cell.X { color: #e74c3c; }
+.cell.O { color: #3498db; }
+
+.cell:hover:not(.disabled) {
+    transform: scale(1.1);
+    background: #ddd;
+}
+
+.cell.disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+/* Inputs and buttons */
+input, button {
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+}
+
+input {
+    width: 150px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background: #27ae60;
+    color: white;
+    font-weight: bold;
+    transition: background 0.2s ease-in-out;
+}
+
+button:hover {
+    background: #2ecc71;
+}
+
+#status {
+    margin: 10px 0;
+    font-size: 18px;
+    color: #555;
+    min-height: 22px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Tic-Tac-Toe</h1>
+
+    <input id="room" placeholder="Room name">
+    <button onclick="joinRoom(false)">2 Player</button>
+    <button onclick="joinRoom(true)">Play vs Computer</button>
+
+    <p id="status"></p>
+
+    <div id="board"></div>
+    <button onclick="resetGame()">Reset Game</button>
+</div>
+
+<script>
+let socket = io();
+let player = null;
+let turn = "X";
+let room = null;
+
+function joinRoom(vsComputer) {
+    room = document.getElementById("room").value;
+    if(!room) return alert("Enter room name");
+    socket.emit("join", {room: room, vs_computer: vsComputer});
+}
+
+function createBoard(boardArray) {
+    const boardDiv = document.getElementById("board");
+    boardDiv.innerHTML = "";
+    boardArray.forEach((val, idx) => {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        if(val==="X") cell.classList.add("X");
+        if(val==="O") cell.classList.add("O");
+        cell.textContent = val;
+        cell.onclick = () => makeMove(idx);
+        if(val!==" " || (player && player!==turn)) cell.classList.add("disabled");
+        boardDiv.appendChild(cell);
+    });
+}
+
+function makeMove(idx) {
+    socket.emit("move", {room: room, index: idx});
+}
+
+function resetGame() {
+    socket.emit("reset", {room: room});
+}
+
+socket.on("update", data => {
+    player = player || data.player;
+    turn = data.turn;
+    createBoard(data.board);
+    document.getElementById("status").textContent = `You are ${player}. ${turn}'s turn.`;
+});
+
+socket.on("game_over", msg => {
+    alert(msg);
+});
+
+socket.on("info", msg => console.log(msg));
+socket.on("full", msg => alert(msg));
+</script>
+
+</body>
+</html>
