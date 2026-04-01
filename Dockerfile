@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install Flask flask-socketio eventlet
+RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 5000
-
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-k", "eventlet", "-w", "1", "-b", "0.0.0.0:5000", "app:app"]
